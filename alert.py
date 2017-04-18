@@ -17,8 +17,15 @@ This is an e-mail message to be sent in HTML format
 <h1>This is headline.</h1>
 """
 msg = MIMEMultipart('alternative')
+text = "plaaaaaaaaaain text"
 
-msg.attach(MIMEText(message, 'html'))
+#part1 = MIMEText(text, 'plain')
+#part2 = MIMEText(message, 'html')
+#
+#msg.attach(part1)
+#msg.attach(part2)
+msg = MIMEText(text)
+
 msg['Subject'] = "SMTP HTML e-mail test"
 msg['From'] = login
 msg['To'] = to
@@ -27,5 +34,5 @@ print(login,password,to,msg)
 smtpObj = smtplib.SMTP_SSL('smtp.mail.yahoo.com',465)
 smtpObj.ehlo()
 print(smtpObj.login(login,password))
-print(smtpObj.sendmail(login,to,msg))
+print(smtpObj.sendmail(login,to,msg.as_string()))
 smtpObj.quit()
