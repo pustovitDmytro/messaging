@@ -11,26 +11,34 @@ password = secret["bots"]["yahoo"]["password"]
 to = secret["mine"]["test"]["login"]
 
 
-message="""
-This is an e-mail message to be sent in HTML format
-<b>This is HTML message.</b>
-<h1>This is headline.</h1>
+message="""\
+<html>
+  <head></head>
+  <body>
+    <p>Hi!<br>
+       How are you?<br>
+       Here is the <a href="http://www.python.org">link</a> you wanted.
+    </p>
+  </body>
+</html>
 """
-msg = MIMEMultipart('alternative')
+msg = MIMEMultipart('related')
+msgAlt = MIMEMultipart('alternative')
 text = "plaaaaaaaaaain text"
 
-#part1 = MIMEText(text, 'plain')
-#part2 = MIMEText(message, 'html')
-#
-#msg.attach(part1)
-#msg.attach(part2)
-msg = MIMEText(text)
+part1 = MIMEText(text, 'plain')
+part2 = MIMEText(message, 'html')
 
 msg['Subject'] = "SMTP HTML e-mail test"
 msg['From'] = login
 msg['To'] = to
 
-print(login,password,to,msg)
+msgAlt.attach(part1)
+msgAlt.attach(part2)
+msg.attach(msgAlt)
+
+print(msg.as_string())
+#print(login,password,to,msg)
 smtpObj = smtplib.SMTP_SSL('smtp.mail.yahoo.com',465)
 smtpObj.ehlo()
 print(smtpObj.login(login,password))
