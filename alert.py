@@ -2,45 +2,76 @@ import smtplib
 import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from bs4 import BeautifulSoup
+import re
 
-json_file = "secret.json"
-with open('secret.json') as file:    
-    secret = json.load(file)
-login = secret["bots"]["yahoo"]["login"]
-password = secret["bots"]["yahoo"]["password"]
-to = secret["mine"]["test"]["login"]
+def get_authentication(filename , option='yahoo-bot'):
+    with open(filename) as file:
+        secret = json.load(file)
+        if option=='yahoo-bot':
+            data = secret["bots"]["yahoo"]
+        elif option=='gmail-test':
+            data = secret["mine"]["test"]
+        return (data['host'],data['port'],data['login'],data['password'])
 
+def html_to_plain(html):
+    msg = re.sub(r'<br>','\n',html.strip())
+    bs = BeautifulSoup(msg,"html.parser")
+    list = []
+    for a in bs.findAll('a'):
+        href = a.attrs['href']
+        list.append(a.text + ": " + href)
+    msg = bs.text
+    if len(list)>0:
+        msg+="\nhidden links:\n"
+        for item in list:
+            msg+=item+"\n"
+    return msg
 
-message="""\
-<html>
-  <head></head>
-  <body>
-    <p>Hi!<br>
-       How are you?<br>
-       Here is the <a href="http://www.python.org">link</a> you wanted.
-    </p>
-  </body>
-</html>
-"""
+def add_body(msg,html,plain=0):
+    if plain==0:
+        plain = html_to_plain(html)
+    part1 = MIMEText(plain, 'plain')
+    part2 = MIMEText(html, 'html')
+    altMsg = MIMEMultipart('alternative')
+    altMsg.attach(part1)
+    altMsg.attach(part2)
+    msg.attach(altMsg)
+
+def add_header(msg,Subject,From,To):
+    msg['Subject'] = Subject
+    msg['From'] = From
+    msg['To'] = To
+
+def sendMessage(authentication,msg,To):
+    if authentication[1]==465:
+        smtpObj = smtplib.SMTP_SSL(authentication[0], authentication[1])
+        smtpObj.ehlo()
+    else:
+        smtpObj = smtplib.SMTP(authentication[0], authentication[1])
+        smtpObj.ehlo()
+        smtpObj.starttls()
+    smtpObj.login(authentication[2],authentication[3])
+    smtpObj.sendmail(authentication[2],To,msg.as_string())
+    smtpObj.quit()
+
+authentication=get_authentication('secret.json')
 msg = MIMEMultipart('related')
-msgAlt = MIMEMultipart('alternative')
-text = "plaaaaaaaaaain text"
+html="""
 
-part1 = MIMEText(text, 'plain')
-part2 = MIMEText(message, 'html')
+<h1> this is title </h1>
+<p> first <b>paragraph</b> </p>
+<p> second<br> paragraph </p>
+<p> third paragraph <a href="google">somwere</a></p>
+<ol>
+<li>item1</li>
+<li>item2</li>
+<li>item3</li>
+</ol>
 
-msg['Subject'] = "SMTP HTML e-mail test"
-msg['From'] = login
-msg['To'] = to
+"""
+add_header(msg,"Test python module",authentication[2], 'pustic@gmail.com')
+add_body(msg,html)
+sendMessage(authentication,msg,'pustic@gmail.com')
 
-msgAlt.attach(part1)
-msgAlt.attach(part2)
-msg.attach(msgAlt)
 
-print(msg.as_string())
-#print(login,password,to,msg)
-smtpObj = smtplib.SMTP_SSL('smtp.mail.yahoo.com',465)
-smtpObj.ehlo()
-print(smtpObj.login(login,password))
-print(smtpObj.sendmail(login,to,msg.as_string()))
-smtpObj.quit()
